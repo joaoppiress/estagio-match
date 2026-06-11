@@ -1,0 +1,20 @@
+{
+    "name": "EstágioMatch — Plataforma inteligente de estágios",
+    "short_name": "EstágioMatch",
+    "description": "Conecte-se a estágios com recomendação por perfil, candidatura rápida e reputação bidirecional.",
+    "start_url": "controlador.php?rota=home",
+    "scope": "./",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#f9fafb",
+    "theme_color": "#2563eb",
+    "lang": "pt-BR",
+    "icons": [
+        {
+            "src": "public/assets/icons/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}

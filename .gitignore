@@ -1,0 +1,10 @@
+# Variáveis de ambiente
+.env
+
+# Configuração local do Claude Code (por desenvolvedor)
+.claude/settings.local.json
+
+# Cruft de SO / editor
+.DS_Store
+Thumbs.db
+*.log
