@@ -1,7 +1,11 @@
-/* EstágioMatch service worker — minimal offline shell.
-   Lives at the app root so its scope covers all routes. */
-const CACHE = 'em-static-v1';
-const ASSETS = [
+/* EstágioMatch service worker — offline shell, network-first.
+   Lives at the app root so its scope covers all routes.
+
+   Network-first em vez de cache-first: online sempre busca a versão mais
+   recente (corrige CSS/JS/tema desatualizado ao navegar); o cache só é usado
+   como fallback offline. A versão do cache é trocada para limpar o lixo antigo. */
+const CACHE = 'em-static-v2';
+const OFFLINE_ASSETS = [
     'public/assets/css/app.css',
     'public/assets/js/app.js',
     'public/assets/js/theme-init.js',
@@ -10,18 +14,17 @@ const ASSETS = [
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).catch(() => {})
+        caches.open(CACHE).then((cache) => cache.addAll(OFFLINE_ASSETS)).catch(() => {})
     );
     self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then((keys) =>
-            Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-        )
+        caches.keys()
+            .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+            .then(() => self.clients.claim())
     );
-    self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
@@ -29,20 +32,20 @@ self.addEventListener('fetch', (event) => {
     if (req.method !== 'GET') return;
 
     const url = new URL(req.url);
-    if (url.origin !== self.location.origin) return; // let VLibras/CDN hit network
+    if (url.origin !== self.location.origin) return; // VLibras/CDN vão direto à rede
 
-    // Cache-first for static assets.
-    if (/\.(css|js|svg|png|webmanifest|woff2?)$/.test(url.pathname)) {
-        event.respondWith(
-            caches.match(req).then((cached) => cached || fetch(req).then((res) => {
-                const copy = res.clone();
-                caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+    const isAsset = /\.(css|js|svg|png|webmanifest|woff2?)$/.test(url.pathname);
+
+    // Network-first: tenta a rede; em sucesso atualiza o cache; offline cai no cache.
+    event.respondWith(
+        fetch(req)
+            .then((res) => {
+                if (isAsset && res && res.ok) {
+                    const copy = res.clone();
+                    caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+                }
                 return res;
-            }).catch(() => cached))
-        );
-        return;
-    }
-
-    // Network-first for dynamic PHP pages.
-    event.respondWith(fetch(req).catch(() => caches.match(req)));
+            })
+            .catch(() => caches.match(req))
+    );
 });

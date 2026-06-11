@@ -49,7 +49,17 @@ function action_url(): string
 
 function asset_url(string $path): string
 {
-    return base_url('public/assets/' . ltrim($path, '/'));
+    $relative = 'public/assets/' . ltrim($path, '/');
+    $url = base_url($relative);
+
+    // Cache-busting: a URL muda quando o arquivo muda, evitando CSS/JS antigo
+    // servido pelo navegador ou pelo service worker.
+    $full = BASE_PATH . '/' . $relative;
+    if (is_file($full)) {
+        $url .= '?v=' . filemtime($full);
+    }
+
+    return $url;
 }
 
 function redirect(string $url): never
