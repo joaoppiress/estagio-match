@@ -12,8 +12,12 @@ final class HomeController extends Controller
 {
     public function index(): void
     {
-        $featured = (new Vacancy())->active([], Auth::id(), 3);
-        $this->view('home', ['featured' => $featured]);
+        $vacancyModel = new Vacancy();
+        $featured = $vacancyModel->active([], Auth::id(), 8);
+        $this->view('home', [
+            'featured' => $featured,
+            'totalVacancies' => $vacancyModel->countActive(),
+        ]);
     }
 
     public function login(): void

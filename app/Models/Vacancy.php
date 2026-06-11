@@ -118,6 +118,11 @@ final class Vacancy extends Model
         return $stmt->fetchAll();
     }
 
+    public function countActive(): int
+    {
+        return (int) $this->db->query('SELECT COUNT(*) FROM vacancies WHERE status = "active"')->fetchColumn();
+    }
+
     public function companyStats(int $companyId): array
     {
         $stmt = $this->db->prepare(
