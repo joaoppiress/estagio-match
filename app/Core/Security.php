@@ -50,11 +50,27 @@ final class Security
 
     public static function sendHeaders(): void
     {
-        header('X-Frame-Options: SAMEORIGIN');
         header('X-Content-Type-Options: nosniff');
         header('Referrer-Policy: strict-origin-when-cross-origin');
         header('Permissions-Policy: camera=(), microphone=(), geolocation=(self)');
-        header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self'; form-action 'self'; base-uri 'self'");
+
+        // VLibras (gov.br) runs a Unity WebGL player: it needs 'unsafe-eval' / 'wasm-unsafe-eval',
+        // blob: workers and a frame from vlibras.gov.br. 'unsafe-inline' is still required while
+        // views bind dynamic widths/--score inline. Everything else stays restricted to 'self'.
+        // VLibras' plugin.js 302-redirects to jsDelivr, and the Unity player streams its
+        // dictionary/assets from both hosts — so both origins must be allowed.
+        $vlibras = 'https://vlibras.gov.br https://cdn.jsdelivr.net';
+        header(
+            "Content-Security-Policy: default-src 'self'; "
+            . "img-src 'self' data: blob: {$vlibras}; "
+            . "style-src 'self' 'unsafe-inline' {$vlibras}; "
+            . "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: {$vlibras}; "
+            . "worker-src 'self' blob:; "
+            . "connect-src 'self' blob: data: {$vlibras}; "
+            . "frame-src 'self' {$vlibras}; "
+            . "font-src 'self' data: {$vlibras}; "
+            . "form-action 'self'; base-uri 'self'; frame-ancestors 'self'"
+        );
     }
 
     public static function csrfToken(): string
