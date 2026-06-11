@@ -1,10 +1,12 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light" data-contrast="normal">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#2563eb">
     <title>Erro no sistema</title>
     <link rel="stylesheet" href="<?= e(asset_url('css/app.css')) ?>">
+    <script src="<?= e(asset_url('js/theme-init.js')) ?>"></script>
 </head>
 <body>
     <main class="empty-state">

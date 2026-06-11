@@ -2,28 +2,32 @@
 $title = 'Meu Perfil - EstágioMatch';
 $active = 'perfil';
 $skillCsv = implode(', ', array_map(static fn (array $skill): string => $skill['skill'], $skills));
+$completeness = (int) ($profile['profile_completeness'] ?? 25);
 require BASE_PATH . '/app/Views/partials/navbar.php';
 ?>
 
-<main class="page-wrap">
+<main class="page-wrap" id="conteudo">
     <div class="profile-grid">
-        <aside>
-            <section class="card" style="text-align:center;margin-bottom:16px">
-                <span class="avatar" style="height:84px;width:84px;font-size:28px;margin-bottom:14px"><?= e((new App\Models\User())->initials($user)) ?></span>
-                <h1 style="font-size:22px;margin:0 0 4px"><?= e($user['name']) ?></h1>
-                <p class="muted" style="margin:0 0 12px"><?= e($profile['course'] ?? 'Curso não informado') ?> · <?= e($profile['current_period'] ?? '-') ?>º período</p>
-                <div class="chips" style="justify-content:center">
+        <aside data-reveal>
+            <section class="card text-center mb-4">
+                <span class="avatar avatar-xl"><?= e((new App\Models\User())->initials($user)) ?></span>
+                <h1 class="fs-22 mb-1 mt-3"><?= e($user['name']) ?></h1>
+                <p class="muted mb-3"><?= e($profile['course'] ?? 'Curso não informado') ?> · <?= e($profile['current_period'] ?? '-') ?>º período</p>
+                <div class="chips chips-center">
                     <span class="badge badge-gray"><?= e($profile['institution'] ?? 'Instituição') ?></span>
                     <span class="badge badge-gray"><?= e($profile['city'] ?? 'Cidade') ?>, <?= e($profile['state'] ?? '') ?></span>
                 </div>
                 <div class="divider"></div>
-                <div class="score-ring" style="--score:<?= e($profile['profile_completeness'] ?? 25) ?>%"><span><?= e($profile['profile_completeness'] ?? 25) ?>%</span></div>
+                <div class="score-ring" style="--score:<?= e($completeness) ?>%" role="progressbar"
+                     aria-label="Completude do perfil" aria-valuenow="<?= e($completeness) ?>" aria-valuemin="0" aria-valuemax="100">
+                    <span><?= e($completeness) ?>%</span>
+                </div>
                 <p class="muted">Completude do perfil</p>
             </section>
 
-            <section class="card" style="margin-bottom:16px;text-align:center">
+            <section class="card text-center mb-4">
                 <strong>Reputação</strong>
-                <div style="font-size:34px;font-weight:900;margin-top:8px"><?= e($studentRating ?: '0.0') ?></div>
+                <div class="big-number mt-2"><?= e($studentRating ?: '0.0') ?></div>
                 <p class="muted">Avaliação média recebida de empresas</p>
             </section>
 
@@ -36,15 +40,15 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
             </section>
         </aside>
 
-        <section>
-            <form class="card" method="post" action="<?= e(action_url()) ?>" style="margin-bottom:20px">
+        <section data-reveal style="--reveal-delay:90ms">
+            <form class="card mb-5" method="post" action="<?= e(action_url()) ?>">
                 <?= csrf_field() ?>
                 <input type="hidden" name="acao" value="perfil_atualizar">
 
                 <div class="section-hd">
                     <div>
-                        <h2 style="margin:0">Dados acadêmicos e preferências</h2>
-                        <p class="muted" style="margin:4px 0 0">Esses dados alimentam o algoritmo de recomendação.</p>
+                        <h2 class="m-0">Dados acadêmicos e preferências</h2>
+                        <p class="muted mt-1">Esses dados alimentam o algoritmo de recomendação.</p>
                     </div>
                     <button class="btn btn-primary" type="submit">Salvar perfil</button>
                 </div>
@@ -80,7 +84,9 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
                     </div>
                     <div class="form-group">
                         <label class="label" for="state">Estado</label>
-                        <input class="input" id="state" name="state" maxlength="2" value="<?= e($profile['state'] ?? 'SP') ?>" required>
+                        <select class="input" id="state" name="state" required>
+                            <?= uf_options($profile['state'] ?? 'SP') ?>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label class="label" for="neighborhood">Bairro</label>
@@ -88,7 +94,7 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
                     </div>
                     <div class="form-group">
                         <label class="label" for="cep">CEP</label>
-                        <input class="input" id="cep" name="cep" value="<?= e($profile['cep'] ?? '') ?>">
+                        <input class="input" id="cep" name="cep" value="<?= e($profile['cep'] ?? '') ?>" inputmode="numeric" placeholder="00000-000">
                     </div>
                     <div class="form-group">
                         <label class="label" for="availability">Disponibilidade</label>
@@ -121,9 +127,9 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
                 <div class="grid-2">
                     <div class="form-group">
                         <label class="label" for="portfolio_url">Portfólio</label>
-                        <input class="input" id="portfolio_url" type="url" name="portfolio_url" value="<?= e($profile['portfolio_url'] ?? '') ?>">
+                        <input class="input" id="portfolio_url" type="url" name="portfolio_url" value="<?= e($profile['portfolio_url'] ?? '') ?>" placeholder="https://...">
                     </div>
-                    <label class="inline" style="gap:8px;margin-top:28px">
+                    <label class="checkbox-row mt-7">
                         <input type="checkbox" name="accessibility_libras" value="1" <?= checked(!empty($profile['accessibility_libras'])) ?>>
                         <span>Desejo recursos de acessibilidade/Libras</span>
                     </label>
@@ -140,7 +146,12 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
                     <div class="section-title">Minhas candidaturas</div>
                 </div>
                 <?php if ($applications === []): ?>
-                    <p class="muted">Nenhuma candidatura enviada ainda.</p>
+                    <div class="empty-block">
+                        <div class="empty-icon" aria-hidden="true">📋</div>
+                        <strong>Nenhuma candidatura enviada ainda</strong>
+                        <p class="muted mb-4">Que tal explorar as vagas recomendadas para o seu perfil?</p>
+                        <a class="btn btn-primary" href="<?= e(route_url('vagas')) ?>">Ver vagas</a>
+                    </div>
                 <?php else: ?>
                     <div class="table-list">
                         <?php foreach ($applications as $application): ?>
@@ -148,7 +159,7 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
                                 <span class="co-logo"><?= e($application['logo_initials']) ?></span>
                                 <div>
                                     <strong><?= e($application['title']) ?></strong>
-                                    <p class="muted" style="margin:2px 0 0"><?= e($application['trade_name']) ?> · match <?= e($application['match_score']) ?>%</p>
+                                    <p class="muted mt-1"><?= e($application['trade_name']) ?> · match <?= e($application['match_score']) ?>%</p>
                                 </div>
                                 <span class="badge badge-blue"><?= e(status_label($application['status'])) ?></span>
                             </div>
@@ -159,4 +170,3 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
         </section>
     </div>
 </main>
-

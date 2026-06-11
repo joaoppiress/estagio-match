@@ -1,12 +1,13 @@
 <?php
 $title = 'Entrar ou cadastrar - EstágioMatch';
 $active = 'login';
+$showDemo = (bool) app_config('debug', false);
 require BASE_PATH . '/app/Views/partials/navbar.php';
 ?>
 
-<main class="auth-shell">
+<main class="auth-shell" id="conteudo">
     <section class="auth-side">
-        <span class="badge" style="background:rgba(255,255,255,.15);color:#fff">Plataforma inteligente de estágios</span>
+        <span class="badge badge-on-blue">Plataforma inteligente de estágios</span>
         <h1>Entre para uma experiência moderna de estágio.</h1>
         <p>Login seguro com sessão reforçada, proteção CSRF e bloqueio por excesso de tentativas.</p>
         <ul>
@@ -19,12 +20,15 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
 
     <section class="auth-main">
         <div class="auth-card">
-            <div class="pill-nav" aria-label="Alternar autenticação">
-                <button class="pill-tab active" type="button" data-auth-tab="login">Entrar</button>
-                <button class="pill-tab" type="button" data-auth-tab="cadastro">Cadastrar</button>
+            <div class="pill-nav" role="tablist" aria-label="Alternar entre entrar e cadastrar">
+                <button class="pill-tab active" type="button" role="tab" id="tab-login"
+                        aria-selected="true" aria-controls="panel-login" data-auth-tab="login">Entrar</button>
+                <button class="pill-tab" type="button" role="tab" id="tab-cadastro" tabindex="-1"
+                        aria-selected="false" aria-controls="panel-cadastro" data-auth-tab="cadastro">Cadastrar</button>
             </div>
 
-            <form method="post" action="<?= e(action_url()) ?>" data-auth-panel="login">
+            <form method="post" action="<?= e(action_url()) ?>" data-auth-panel="login"
+                  id="panel-login" role="tabpanel" aria-labelledby="tab-login">
                 <?= csrf_field() ?>
                 <input type="hidden" name="acao" value="login">
                 <h2>Bom te ver de volta</h2>
@@ -33,6 +37,7 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
                 <div class="form-group">
                     <label class="label" for="login-email">E-mail</label>
                     <input class="input" id="login-email" type="email" name="email" value="<?= e(old('email')) ?>" autocomplete="email" required>
+                    <p class="field-error" aria-live="polite"></p>
                 </div>
 
                 <div class="form-group">
@@ -40,11 +45,14 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
                     <input class="input" id="login-password" type="password" name="password" autocomplete="current-password" required>
                 </div>
 
-                <button class="btn btn-primary btn-lg" style="width:100%" type="submit">Entrar na plataforma</button>
-                <p class="muted" style="text-align:center">Senha demo: <strong>Estagio@12345</strong></p>
+                <button class="btn btn-primary btn-lg w-full" type="submit">Entrar na plataforma</button>
+                <?php if ($showDemo): ?>
+                    <p class="muted text-center mt-3">Ambiente de desenvolvimento — senha demo: <strong>Estagio@12345</strong></p>
+                <?php endif; ?>
             </form>
 
-            <form method="post" action="<?= e(action_url()) ?>" data-auth-panel="cadastro" hidden>
+            <form method="post" action="<?= e(action_url()) ?>" data-auth-panel="cadastro" hidden
+                  id="panel-cadastro" role="tabpanel" aria-labelledby="tab-cadastro">
                 <?= csrf_field() ?>
                 <input type="hidden" name="acao" value="cadastrar">
                 <h2>Criar conta gratuita</h2>
@@ -68,15 +76,21 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
                     <input class="input" id="empresa" name="empresa" value="<?= e(old('empresa')) ?>">
                 </div>
 
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label class="label" for="email">E-mail</label>
-                        <input class="input" id="email" type="email" name="email" value="<?= e(old('email')) ?>" autocomplete="email" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="label" for="senha">Senha forte</label>
-                        <input class="input" id="senha" type="password" name="senha" minlength="10" autocomplete="new-password" required>
-                    </div>
+                <div class="form-group">
+                    <label class="label" for="email">E-mail</label>
+                    <input class="input" id="email" type="email" name="email" value="<?= e(old('email')) ?>" autocomplete="email" required>
+                    <p class="field-error" aria-live="polite"></p>
+                </div>
+
+                <div class="form-group">
+                    <label class="label" for="senha">Senha forte</label>
+                    <input class="input" id="senha" type="password" name="senha" minlength="10" autocomplete="new-password" data-password-meter required>
+                </div>
+
+                <div class="form-group">
+                    <label class="label" for="senha_confirma">Confirmar senha</label>
+                    <input class="input" id="senha_confirma" type="password" autocomplete="new-password" data-confirm-for="senha" required>
+                    <p class="field-error" aria-live="polite"></p>
                 </div>
 
                 <div class="grid-2">
@@ -97,7 +111,9 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
                 <div class="grid-2">
                     <div class="form-group">
                         <label class="label" for="estado">Estado</label>
-                        <input class="input" id="estado" name="estado" value="<?= e(old('estado', 'SP')) ?>" maxlength="2" required>
+                        <select class="input" id="estado" name="estado" required>
+                            <?= uf_options(old('estado', 'SP')) ?>
+                        </select>
                     </div>
                     <div class="form-group" data-student-field>
                         <label class="label" for="periodo">Período</label>
@@ -105,15 +121,14 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
                     </div>
                 </div>
 
-                <label class="inline" style="gap:8px;margin:6px 0 16px">
+                <label class="checkbox-row">
                     <input type="checkbox" name="lgpd" value="1" required>
                     <span class="muted">Aceito os Termos de Uso e a Política de Privacidade.</span>
                 </label>
 
-                <button class="btn btn-primary btn-lg" style="width:100%" type="submit">Criar minha conta</button>
-                <p class="muted" style="font-size:12px;text-align:center">Senha mínima: 10 caracteres, maiúscula, minúscula, número e símbolo.</p>
+                <button class="btn btn-primary btn-lg w-full" type="submit">Criar minha conta</button>
+                <p class="muted text-xs text-center mt-3">Senha mínima: 10 caracteres, maiúscula, minúscula, número e símbolo.</p>
             </form>
         </div>
     </section>
 </main>
-

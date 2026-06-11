@@ -4,11 +4,11 @@ $active = 'empresa/vagas/nova';
 require BASE_PATH . '/app/Views/partials/navbar.php';
 ?>
 
-<main class="page-wrap">
+<main class="page-wrap" id="conteudo">
     <div class="section-hd">
         <div>
-            <h1 style="margin:0">Publicar nova vaga</h1>
-            <p class="muted" style="margin:4px 0 0"><?= e($company['trade_name'] ?? 'Empresa') ?> · anúncio ativo por 30 dias no plano gratuito.</p>
+            <h1 class="m-0">Publicar nova vaga</h1>
+            <p class="muted mt-1"><?= e($company['trade_name'] ?? 'Empresa') ?> · anúncio ativo por 30 dias no plano gratuito.</p>
         </div>
         <a class="btn btn-outline" href="<?= e(route_url('dashboard')) ?>">Voltar</a>
     </div>
@@ -50,7 +50,9 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
             </div>
             <div class="form-group">
                 <label class="label" for="state">Estado</label>
-                <input class="input" id="state" name="state" maxlength="2" value="<?= e($company['state'] ?? 'SP') ?>" required>
+                <select class="input" id="state" name="state" required>
+                    <?= uf_options($company['state'] ?? 'SP') ?>
+                </select>
             </div>
             <div class="form-group">
                 <label class="label" for="address">Endereço</label>
@@ -91,7 +93,7 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
             </div>
         </div>
 
-        <label class="inline" style="gap:8px;margin-bottom:18px">
+        <label class="checkbox-row">
             <input type="checkbox" name="transport_included" value="1">
             <span>Vale-transporte incluso</span>
         </label>
