@@ -2,11 +2,22 @@
 
 declare(strict_types=1);
 
+function app_env_value(string $key, mixed $default = null): mixed
+{
+    $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
+
+    if ($value === false || $value === null || $value === '') {
+        return $default;
+    }
+
+    return $value;
+}
+
 return [
     'name' => 'EstágioMatch',
-    'env' => getenv('APP_ENV') ?: 'development',
-    'debug' => filter_var(getenv('APP_DEBUG') ?: false, FILTER_VALIDATE_BOOLEAN),
-    'base_url' => rtrim((string) (getenv('APP_URL') ?: '/estagio-match'), '/'),
+    'env' => app_env_value('APP_ENV', 'development'),
+    'debug' => filter_var(app_env_value('APP_DEBUG', false), FILTER_VALIDATE_BOOLEAN),
+    'base_url' => rtrim((string) app_env_value('APP_URL', ''), '/'),
     'session_name' => 'ESTAGIOMATCHSESSID',
     'security' => [
         'csrf_key' => '_csrf_token',
@@ -16,4 +27,3 @@ return [
         'min_password_length' => 10,
     ],
 ];
-
