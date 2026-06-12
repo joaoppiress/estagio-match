@@ -59,7 +59,7 @@ final class Security
         // views bind dynamic widths/--score inline. Everything else stays restricted to 'self'.
         // VLibras' plugin.js 302-redirects to jsDelivr, and the Unity player streams its
         // dictionary/assets from both hosts — so both origins must be allowed.
-        $vlibras = 'https://vlibras.gov.br https://cdn.jsdelivr.net';
+        $vlibras = 'https://vlibras.gov.br https://www.vlibras.gov.br https://cdn.jsdelivr.net';
         header(
             "Content-Security-Policy: default-src 'self'; "
             . "img-src 'self' data: blob: {$vlibras}; "
