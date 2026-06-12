@@ -38,7 +38,7 @@ final class Auth
         session_regenerate_id(true);
         $_SESSION['user_id'] = (int) $user['id'];
         $_SESSION['user_role'] = (string) $user['role'];
-        $_SESSION['_fingerprint'] = hash('sha256', (string) ($_SERVER['HTTP_USER_AGENT'] ?? 'cli') . '|EstagioMatch');
+        $_SESSION['_fingerprint'] = Security::sessionFingerprint();
         $_SESSION['_last_regenerate'] = time();
     }
 

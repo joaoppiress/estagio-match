@@ -7,6 +7,7 @@ USE estagiomatch;
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS audit_logs;
+DROP TABLE IF EXISTS notificacoes;
 DROP TABLE IF EXISTS login_attempts;
 DROP TABLE IF EXISTS ratings;
 DROP TABLE IF EXISTS applications;
@@ -15,6 +16,7 @@ DROP TABLE IF EXISTS vacancies;
 DROP TABLE IF EXISTS companies;
 DROP TABLE IF EXISTS student_skills;
 DROP TABLE IF EXISTS student_profiles;
+DROP TABLE IF EXISTS email_verifications;
 DROP TABLE IF EXISTS password_resets;
 DROP TABLE IF EXISTS users;
 
@@ -48,6 +50,17 @@ CREATE TABLE password_resets (
   UNIQUE KEY password_resets_token_unique (token_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE email_verifications (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  used_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT email_verifications_user_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE KEY email_verifications_token_unique (token_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE student_profiles (
   user_id BIGINT UNSIGNED PRIMARY KEY,
   course VARCHAR(140) NULL,
@@ -59,6 +72,8 @@ CREATE TABLE student_profiles (
   state CHAR(2) NULL,
   neighborhood VARCHAR(100) NULL,
   cep VARCHAR(12) NULL,
+  latitude DECIMAL(10,7) NULL,
+  longitude DECIMAL(10,7) NULL,
   interests VARCHAR(255) NULL,
   availability VARCHAR(80) NULL,
   preferred_modality ENUM('presencial','remoto','hibrido','qualquer') NOT NULL DEFAULT 'qualquer',
@@ -118,6 +133,8 @@ CREATE TABLE vacancies (
   city VARCHAR(100) NULL,
   state CHAR(2) NULL,
   address VARCHAR(190) NULL,
+  latitude DECIMAL(10,7) NULL,
+  longitude DECIMAL(10,7) NULL,
   period VARCHAR(80) NULL,
   duration_months TINYINT UNSIGNED NULL,
   start_date_label VARCHAR(80) NULL,
@@ -132,6 +149,7 @@ CREATE TABLE vacancies (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT vacancies_company_fk FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
   KEY vacancies_status_idx (status, published_at),
+  KEY vacancies_status_boosted_published_idx (status, is_boosted, published_at),
   KEY vacancies_area_idx (area),
   KEY vacancies_location_idx (city, state),
   FULLTEXT KEY vacancies_search_fulltext (title, description, requirements, area)
@@ -193,6 +211,18 @@ CREATE TABLE login_attempts (
   CONSTRAINT login_attempts_user_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
   KEY login_attempts_email_ip_idx (email, attempted_at),
   KEY login_attempts_user_idx (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE notificacoes (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  usuario_id BIGINT UNSIGNED NOT NULL,
+  tipo VARCHAR(60) NOT NULL,
+  titulo VARCHAR(160) NOT NULL,
+  mensagem VARCHAR(500) NOT NULL,
+  lida_em DATETIME NULL,
+  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT notificacoes_usuario_fk FOREIGN KEY (usuario_id) REFERENCES users(id) ON DELETE CASCADE,
+  KEY notificacoes_usuario_lida_idx (usuario_id, lida_em)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE audit_logs (

@@ -26,12 +26,14 @@ final class DashboardController extends Controller
             $company = (new Company())->findByUserId((int) $user['id']);
             $stats = $company ? $vacancyModel->companyStats((int) $company['id']) : ['vagas' => 0, 'ativas' => 0];
             $applications = $company ? $applicationModel->companyApplications((int) $company['id']) : [];
+            $vacancies = $company ? $vacancyModel->forCompany((int) $company['id']) : [];
 
             $this->view('dashboard/index', [
                 'user' => $user,
                 'company' => $company,
                 'stats' => $stats,
                 'applications' => $applications,
+                'vacancies' => $vacancies,
             ]);
             return;
         }

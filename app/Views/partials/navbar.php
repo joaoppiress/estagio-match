@@ -1,11 +1,19 @@
 <?php
 
 use App\Core\Auth;
+use App\Models\Notification;
 use App\Models\User;
 
 $active = $active ?? current_route();
 $authUser = Auth::user();
 $initials = $authUser ? (new User())->initials($authUser) : 'EM';
+$notifications = [];
+$notificationCount = 0;
+if ($authUser) {
+    $notificationModel = new Notification();
+    $notifications = $notificationModel->unreadForUser((int) $authUser['id'], 5);
+    $notificationCount = $notificationModel->unreadCount((int) $authUser['id']);
+}
 
 $isActive = static fn (string $route): string => $active === $route ? 'active' : '';
 $ariaCurrent = static fn (string $route): string => $active === $route ? ' aria-current="page"' : '';
@@ -42,6 +50,30 @@ $ariaCurrent = static fn (string $route): string => $active === $route ? ' aria-
 
     <div class="nav-right">
         <?php if ($authUser): ?>
+            <details class="notification-menu">
+                <summary class="btn btn-outline" aria-label="Notificacoes">
+                    <?= icon('bell') ?>
+                    <?php if ($notificationCount > 0): ?>
+                        <span class="badge badge-blue"><?= e($notificationCount) ?></span>
+                    <?php endif; ?>
+                </summary>
+                <div class="notification-panel">
+                    <?php if ($notifications === []): ?>
+                        <p class="muted m-0">Nenhuma notificacao nova.</p>
+                    <?php else: ?>
+                        <?php foreach ($notifications as $notification): ?>
+                            <form method="post" action="<?= e(action_url()) ?>" class="notification-item">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="acao" value="notificacao_lida">
+                                <input type="hidden" name="notificacao_id" value="<?= e($notification['id']) ?>">
+                                <strong><?= e($notification['titulo']) ?></strong>
+                                <p class="muted m-0"><?= e($notification['mensagem']) ?></p>
+                                <button class="section-link" type="submit">Marcar como lida</button>
+                            </form>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </details>
             <span class="avatar" title="<?= e($authUser['name']) ?>" aria-label="Conectado como <?= e($authUser['name']) ?>"><?= e($initials) ?></span>
             <form method="post" action="<?= e(action_url()) ?>">
                 <?= csrf_field() ?>

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'name' => 'EstágioMatch',
     'env' => getenv('APP_ENV') ?: 'development',
-    'debug' => filter_var(getenv('APP_DEBUG') ?: true, FILTER_VALIDATE_BOOLEAN),
+    'debug' => filter_var(getenv('APP_DEBUG') ?: false, FILTER_VALIDATE_BOOLEAN),
     'base_url' => rtrim((string) (getenv('APP_URL') ?: '/estagio-match'), '/'),
     'session_name' => 'ESTAGIOMATCHSESSID',
     'security' => [

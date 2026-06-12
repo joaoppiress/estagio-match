@@ -40,4 +40,17 @@ final class LoginAttempt extends Model
             'successful' => $successful ? 1 : 0,
         ]);
     }
+
+    public function isRateLimited(string $key, string $ip, int $maxAttempts, int $windowMinutes): bool
+    {
+        $stmt = $this->db->prepare(
+            'SELECT COUNT(*) FROM login_attempts
+             WHERE email = :email
+               AND ip_address = INET6_ATON(:ip)
+               AND attempted_at >= DATE_SUB(NOW(), INTERVAL ' . max(1, $windowMinutes) . ' MINUTE)'
+        );
+        $stmt->execute(['email' => mb_strtolower(trim($key)), 'ip' => $ip]);
+
+        return (int) $stmt->fetchColumn() >= $maxAttempts;
+    }
 }

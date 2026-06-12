@@ -6,8 +6,12 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\Controller;
+use App\Core\Servicos\ServicoGeocodificacao;
+use App\Core\Validador;
 use App\Models\AuditLog;
 use App\Models\Company;
+use App\Models\Notification;
+use App\Models\StudentProfile;
 use App\Models\Vacancy;
 use RuntimeException;
 
@@ -30,6 +34,11 @@ final class EmpresaController extends Controller
             throw new RuntimeException('Cadastre uma empresa antes de publicar vagas.');
         }
 
+        $user = Auth::user();
+        if (empty($user['email_verified_at'])) {
+            throw new RuntimeException('Verifique seu e-mail antes de publicar vagas.');
+        }
+
         $data = [
             'company_id' => (int) $company['id'],
             'title' => trim((string) ($_POST['title'] ?? '')),
@@ -50,23 +59,70 @@ final class EmpresaController extends Controller
             'skills' => trim((string) ($_POST['skills'] ?? '')),
         ];
 
-        foreach (['title', 'area', 'description', 'requirements', 'city', 'state'] as $field) {
-            if ($data[$field] === '') {
-                throw new RuntimeException('Preencha todos os campos obrigatórios da vaga.');
-            }
-        }
-        if (!in_array($data['modality'], ['presencial', 'remoto', 'hibrido'], true)) {
-            throw new RuntimeException('Modalidade inválida.');
-        }
+        Validador::required($data, ['title', 'area', 'description', 'requirements', 'city', 'state'], 'Preencha todos os campos obrigatorios da vaga.');
+        Validador::oneOf($data['modality'], ['presencial', 'remoto', 'hibrido'], 'Modalidade invalida.');
         if ($data['scholarship'] < 0) {
-            throw new RuntimeException('Bolsa inválida.');
+            throw new RuntimeException('Bolsa invalida.');
         }
+
+        $location = (new ServicoGeocodificacao())->localizar(null, $data['city'], $data['state']);
+        $data['latitude'] = $location['latitude'] ?? null;
+        $data['longitude'] = $location['longitude'] ?? null;
 
         $vacancyId = (new Vacancy())->create($data);
         (new AuditLog())->record('vacancy_created', ['vacancy_id' => $vacancyId]);
+        $this->notifyHighMatches($vacancyId);
 
-        flash('success', 'Vaga publicada com segurança.');
+        flash('success', 'Vaga publicada com seguranca.');
         redirect(route_url('vaga', ['id' => $vacancyId]));
     }
-}
 
+    public function boostVacancy(): void
+    {
+        Auth::requireRole(['empresa', 'admin']);
+
+        $company = (new Company())->findByUserId((int) Auth::id());
+        $vacancyId = (int) ($_POST['vaga_id'] ?? 0);
+        if (!$company || !(new Vacancy())->setBoostedForCompany($vacancyId, (int) $company['id'], true)) {
+            throw new RuntimeException('Nao foi possivel destacar esta vaga.');
+        }
+
+        (new AuditLog())->record('vacancy_boosted', ['vacancy_id' => $vacancyId]);
+        flash('success', 'Vaga marcada como destaque.');
+        redirect(route_url('dashboard'));
+    }
+
+    public function activatePremium(): void
+    {
+        Auth::requireRole(['empresa', 'admin']);
+
+        $company = (new Company())->findByUserId((int) Auth::id());
+        if (!$company) {
+            throw new RuntimeException('Empresa nao encontrada.');
+        }
+
+        (new Company())->setPremium((int) $company['id'], true);
+        (new AuditLog())->record('company_premium_activated', ['company_id' => $company['id']]);
+
+        flash('success', 'Plano premium ativado para o MVP.');
+        redirect(route_url('dashboard'));
+    }
+
+    private function notifyHighMatches(int $vacancyId): void
+    {
+        $vacancyModel = new Vacancy();
+        $notifications = new Notification();
+
+        foreach ((new StudentProfile())->activeStudentIds() as $studentId) {
+            $vacancy = $vacancyModel->find($vacancyId, $studentId);
+            if ($vacancy && (int) $vacancy['match_score'] >= 80) {
+                $notifications->create(
+                    $studentId,
+                    'vaga_match',
+                    'Nova vaga com alto match',
+                    $vacancy['title'] . ' combina ' . $vacancy['match_score'] . '% com seu perfil.'
+                );
+            }
+        }
+    }
+}

@@ -54,6 +54,12 @@ final class User extends Model
         $stmt->execute(['hash' => $hash, 'id' => $id]);
     }
 
+    public function markEmailVerified(int $id): void
+    {
+        $stmt = $this->db->prepare('UPDATE users SET email_verified_at = COALESCE(email_verified_at, NOW()) WHERE id = :id');
+        $stmt->execute(['id' => $id]);
+    }
+
     public function initials(array $user): string
     {
         $parts = preg_split('/\s+/', trim((string) $user['name'])) ?: [];

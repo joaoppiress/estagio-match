@@ -12,8 +12,8 @@ final class StudentProfile extends Model
     {
         $stmt = $this->db->prepare(
             'INSERT INTO student_profiles
-             (user_id, course, institution, current_period, city, state, interests, preferred_modality, profile_completeness)
-             VALUES (:user_id, :course, :institution, :current_period, :city, :state, :interests, :preferred_modality, :profile_completeness)'
+             (user_id, course, institution, current_period, city, state, latitude, longitude, interests, preferred_modality, profile_completeness)
+             VALUES (:user_id, :course, :institution, :current_period, :city, :state, :latitude, :longitude, :interests, :preferred_modality, :profile_completeness)'
         );
         $stmt->execute([
             'user_id' => $userId,
@@ -22,6 +22,8 @@ final class StudentProfile extends Model
             'current_period' => $data['current_period'] ?? null,
             'city' => $data['city'] ?? null,
             'state' => $data['state'] ?? null,
+            'latitude' => $data['latitude'] ?? null,
+            'longitude' => $data['longitude'] ?? null,
             'interests' => $data['interests'] ?? null,
             'preferred_modality' => $data['preferred_modality'] ?? 'qualquer',
             'profile_completeness' => $this->calculateCompleteness($data),
@@ -50,6 +52,8 @@ final class StudentProfile extends Model
                 state = :state,
                 neighborhood = :neighborhood,
                 cep = :cep,
+                latitude = :latitude,
+                longitude = :longitude,
                 interests = :interests,
                 availability = :availability,
                 preferred_modality = :preferred_modality,
@@ -72,6 +76,8 @@ final class StudentProfile extends Model
             'state' => $data['state'] ?? null,
             'neighborhood' => $data['neighborhood'] ?? null,
             'cep' => $data['cep'] ?? null,
+            'latitude' => $data['latitude'] ?? null,
+            'longitude' => $data['longitude'] ?? null,
             'interests' => $data['interests'] ?? null,
             'availability' => $data['availability'] ?? null,
             'preferred_modality' => $data['preferred_modality'] ?? 'qualquer',
@@ -121,6 +127,18 @@ final class StudentProfile extends Model
         }
 
         return max(25, min(100, (int) round(($filled / count($fields)) * 100)));
+    }
+
+    public function activeStudentIds(): array
+    {
+        $stmt = $this->db->query(
+            'SELECT sp.user_id
+             FROM student_profiles sp
+             INNER JOIN users u ON u.id = sp.user_id
+             WHERE u.status = "active"'
+        );
+
+        return array_map('intval', array_column($stmt->fetchAll(), 'user_id'));
     }
 }
 

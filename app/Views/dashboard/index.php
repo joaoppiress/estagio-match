@@ -13,7 +13,18 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
                 <h1 class="m-0">Painel da empresa</h1>
                 <p class="muted mt-1"><?= e($company['trade_name'] ?? $user['name']) ?> · gestão de vagas e candidaturas</p>
             </div>
-            <a class="btn btn-primary" href="<?= e(route_url('empresa/vagas/nova')) ?>">Publicar vaga</a>
+            <div class="inline-gap">
+                <?php if (empty($company['is_premium'])): ?>
+                    <form method="post" action="<?= e(action_url()) ?>">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="acao" value="empresa_premium">
+                        <button class="btn btn-outline" type="submit">Ativar premium</button>
+                    </form>
+                <?php else: ?>
+                    <span class="badge badge-green">Premium</span>
+                <?php endif; ?>
+                <a class="btn btn-primary" href="<?= e(route_url('empresa/vagas/nova')) ?>">Publicar vaga</a>
+            </div>
         </div>
 
         <section class="grid-4 mb-7" aria-label="Indicadores">
@@ -35,6 +46,36 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
             </div>
         </section>
 
+        <section class="card mb-7">
+            <div class="section-hd">
+                <div class="section-title">Vagas publicadas</div>
+            </div>
+            <?php if (($vacancies ?? []) === []): ?>
+                <p class="muted m-0">Nenhuma vaga publicada ainda.</p>
+            <?php else: ?>
+                <div class="table-list">
+                    <?php foreach ($vacancies as $vacancy): ?>
+                        <div class="table-row">
+                            <div>
+                                <strong><?= e($vacancy['title']) ?></strong>
+                                <p class="muted mt-1"><?= e(vacancy_status_label($vacancy['status'])) ?> · <?= e($vacancy['is_boosted'] ? 'Destaque' : 'Padrao') ?></p>
+                            </div>
+                            <?php if (empty($vacancy['is_boosted'])): ?>
+                                <form method="post" action="<?= e(action_url()) ?>">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="acao" value="empresa_turbinar_vaga">
+                                    <input type="hidden" name="vaga_id" value="<?= e($vacancy['id']) ?>">
+                                    <button class="btn btn-outline btn-sm" type="submit">Turbinar</button>
+                                </form>
+                            <?php else: ?>
+                                <span class="badge badge-blue">Destaque</span>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </section>
+
         <section class="card">
             <div class="section-hd">
                 <div class="section-title">Candidaturas recebidas</div>
@@ -54,7 +95,26 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
                                 <strong><?= e($application['student_name']) ?></strong>
                                 <p class="muted mt-1"><?= e($application['title']) ?> · <?= e($application['course'] ?? 'Curso não informado') ?></p>
                             </div>
-                            <span class="badge badge-blue"><?= e(status_label($application['status'])) ?></span>
+                            <form method="post" action="<?= e(action_url()) ?>" class="inline-gap">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="acao" value="candidatura_status">
+                                <input type="hidden" name="candidatura_id" value="<?= e($application['id']) ?>">
+                                <select class="input input-sm" name="status" aria-label="Status da candidatura">
+                                    <?php foreach (['visualizada', 'em_analise', 'entrevista', 'aprovada', 'reprovada', 'cancelada'] as $status): ?>
+                                        <option value="<?= e($status) ?>" <?= selected($application['status'], $status) ?>><?= e(status_label($status)) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button class="btn btn-outline btn-sm" type="submit">Atualizar</button>
+                            </form>
+                            <?php if ($application['status'] === 'aprovada'): ?>
+                                <form method="post" action="<?= e(action_url()) ?>" class="inline-gap">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="acao" value="avaliacao_criar">
+                                    <input type="hidden" name="candidatura_id" value="<?= e($application['id']) ?>">
+                                    <input class="input input-sm" type="number" min="1" max="5" step="0.5" name="score" placeholder="Nota" required>
+                                    <button class="btn btn-primary btn-sm" type="submit">Avaliar</button>
+                                </form>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -190,7 +250,21 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
                                 <strong><?= e($application['title']) ?></strong>
                                 <p class="muted mt-1"><?= e($application['trade_name']) ?> · enviada em <?= e(date('d/m/Y', strtotime($application['created_at']))) ?></p>
                             </div>
-                            <span class="badge badge-green"><?= e(status_label($application['status'])) ?></span>
+                            <div class="inline-gap">
+                                <span class="badge badge-green"><?= e(status_label($application['status'])) ?></span>
+                                <?php if ($application['status'] === 'aprovada'): ?>
+                                    <form method="post" action="<?= e(action_url()) ?>" class="inline-gap">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="acao" value="avaliacao_criar">
+                                        <input type="hidden" name="candidatura_id" value="<?= e($application['id']) ?>">
+                                        <input class="input input-sm" type="number" min="1" max="5" step="0.5" name="score" placeholder="Nota" required>
+                                        <input class="input input-sm" type="number" min="1" max="5" step="0.5" name="score_learning" placeholder="Aprend." required>
+                                        <input class="input input-sm" type="number" min="1" max="5" step="0.5" name="score_mentorship" placeholder="Ment." required>
+                                        <input class="input input-sm" type="number" min="1" max="5" step="0.5" name="score_environment" placeholder="Amb." required>
+                                        <button class="btn btn-primary btn-sm" type="submit">Avaliar</button>
+                                    </form>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 </div>

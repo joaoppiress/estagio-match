@@ -2132,6 +2132,49 @@ select.input[aria-invalid="true"] {
 
 [data-motion="reduce"] [data-reveal] { opacity: 1 !important; transform: none !important; }
 
+.input-sm {
+    min-height: 36px;
+    padding: 7px 10px;
+    font-size: .88rem;
+}
+
+.notification-menu {
+    position: relative;
+}
+
+.notification-menu summary {
+    list-style: none;
+    cursor: pointer;
+}
+
+.notification-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.notification-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 50;
+    width: min(340px, 90vw);
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: var(--shadow-lg);
+}
+
+.notification-item {
+    display: grid;
+    gap: 6px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.notification-item:last-child {
+    border-bottom: 0;
+}
+
 /* Print */
 @media print {
     .topnav, .a11y-bar, .skip-link, .toast, .save-btn, .nav-toggle, [vw] { display: none !important; }

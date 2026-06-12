@@ -46,6 +46,7 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
                 </div>
 
                 <button class="btn btn-primary btn-lg w-full" type="submit">Entrar na plataforma</button>
+                <p class="muted text-center mt-3"><a class="section-link" href="<?= e(route_url('esqueci-senha')) ?>">Esqueci minha senha</a></p>
                 <?php if ($showDemo): ?>
                     <p class="muted text-center mt-3">Ambiente de desenvolvimento — senha demo: <strong>Estagio@12345</strong></p>
                 <?php endif; ?>
@@ -76,6 +77,11 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
                     <input class="input" id="empresa" name="empresa" value="<?= e(old('empresa')) ?>">
                 </div>
 
+                <div class="form-group" data-company-field>
+                    <label class="label" for="cnpj">CNPJ</label>
+                    <input class="input" id="cnpj" name="cnpj" value="<?= e(old('cnpj')) ?>" inputmode="numeric">
+                </div>
+
                 <div class="form-group">
                     <label class="label" for="email">E-mail</label>
                     <input class="input" id="email" type="email" name="email" value="<?= e(old('email')) ?>" autocomplete="email" required>
@@ -89,7 +95,7 @@ require BASE_PATH . '/app/Views/partials/navbar.php';
 
                 <div class="form-group">
                     <label class="label" for="senha_confirma">Confirmar senha</label>
-                    <input class="input" id="senha_confirma" type="password" autocomplete="new-password" data-confirm-for="senha" required>
+                    <input class="input" id="senha_confirma" type="password" name="senha_confirmacao" autocomplete="new-password" data-confirm-for="senha" required>
                     <p class="field-error" aria-live="polite"></p>
                 </div>
 

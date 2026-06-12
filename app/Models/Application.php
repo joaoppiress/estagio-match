@@ -72,5 +72,59 @@ final class Application extends Model
 
         return $stmt->fetchAll();
     }
+
+    public function findForCompany(int $applicationId, int $companyId): ?array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT a.*, v.company_id, v.title, c.user_id AS company_user_id
+             FROM applications a
+             INNER JOIN vacancies v ON v.id = a.vacancy_id
+             INNER JOIN companies c ON c.id = v.company_id
+             WHERE a.id = :id AND v.company_id = :company_id
+             LIMIT 1'
+        );
+        $stmt->execute(['id' => $applicationId, 'company_id' => $companyId]);
+
+        return $stmt->fetch() ?: null;
+    }
+
+    public function findApprovedById(int $applicationId): ?array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT a.*, v.company_id, v.title, c.user_id AS company_user_id
+             FROM applications a
+             INNER JOIN vacancies v ON v.id = a.vacancy_id
+             INNER JOIN companies c ON c.id = v.company_id
+             WHERE a.id = :id AND a.status = "aprovada"
+             LIMIT 1'
+        );
+        $stmt->execute(['id' => $applicationId]);
+
+        return $stmt->fetch() ?: null;
+    }
+
+    public function findApprovedBetween(int $studentId, int $companyId): ?array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT a.*, v.company_id, c.user_id AS company_user_id
+             FROM applications a
+             INNER JOIN vacancies v ON v.id = a.vacancy_id
+             INNER JOIN companies c ON c.id = v.company_id
+             WHERE a.student_id = :student_id
+               AND v.company_id = :company_id
+               AND a.status = "aprovada"
+             ORDER BY a.updated_at DESC
+             LIMIT 1'
+        );
+        $stmt->execute(['student_id' => $studentId, 'company_id' => $companyId]);
+
+        return $stmt->fetch() ?: null;
+    }
+
+    public function updateStatus(int $applicationId, string $status): void
+    {
+        $stmt = $this->db->prepare('UPDATE applications SET status = :status WHERE id = :id');
+        $stmt->execute(['status' => $status, 'id' => $applicationId]);
+    }
 }
 

@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Core\Auth;
 use App\Core\Controller;
+use App\Core\Servicos\ServicoGeocodificacao;
 use App\Models\Application;
 use App\Models\AuditLog;
 use App\Models\Rating;
@@ -56,14 +57,21 @@ final class PerfilController extends Controller
         ];
 
         if ($data['course'] === '' || $data['city'] === '' || $data['state'] === '') {
-            throw new RuntimeException('Curso, cidade e estado são obrigatórios.');
+            throw new RuntimeException('Curso, cidade e estado sao obrigatorios.');
         }
         if (!in_array($data['preferred_modality'], ['presencial', 'remoto', 'hibrido', 'qualquer'], true)) {
-            throw new RuntimeException('Modalidade inválida.');
+            throw new RuntimeException('Modalidade invalida.');
         }
         if ($data['portfolio_url'] !== '' && !filter_var($data['portfolio_url'], FILTER_VALIDATE_URL)) {
-            throw new RuntimeException('URL do portfólio inválida.');
+            throw new RuntimeException('URL do portfolio invalida.');
         }
+        if ($data['portfolio_url'] !== '' && !preg_match('/^https?:\/\//i', $data['portfolio_url'])) {
+            throw new RuntimeException('A URL do portfolio deve comecar com http:// ou https://.');
+        }
+
+        $location = (new ServicoGeocodificacao())->localizar($data['cep'], $data['city'], $data['state']);
+        $data['latitude'] = $location['latitude'] ?? null;
+        $data['longitude'] = $location['longitude'] ?? null;
 
         $profileModel = new StudentProfile();
         $profileModel->update($userId, $data);
@@ -74,4 +82,3 @@ final class PerfilController extends Controller
         redirect(route_url('perfil'));
     }
 }
-

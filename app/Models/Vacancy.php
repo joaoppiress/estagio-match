@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Model;
+use App\Core\Servicos\ServicoRecomendacao;
 
 final class Vacancy extends Model
 {
@@ -14,8 +15,10 @@ final class Vacancy extends Model
         $params = [];
 
         if (!empty($filters['q'])) {
-            $where[] = '(v.title LIKE :q OR v.area LIKE :q OR c.trade_name LIKE :q OR v.requirements LIKE :q)';
-            $params['q'] = '%' . $filters['q'] . '%';
+            $where[] = '(MATCH(v.title, v.description, v.requirements, v.area) AGAINST (:q IN NATURAL LANGUAGE MODE)
+                OR c.trade_name LIKE :q_like)';
+            $params['q'] = $filters['q'];
+            $params['q_like'] = '%' . $filters['q'] . '%';
         }
         if (!empty($filters['area'])) {
             $where[] = 'v.area = :area';
@@ -66,10 +69,10 @@ final class Vacancy extends Model
     {
         $stmt = $this->db->prepare(
             'INSERT INTO vacancies
-             (company_id, title, area, description, responsibilities, requirements, modality, city, state, address,
+             (company_id, title, area, description, responsibilities, requirements, modality, city, state, address, latitude, longitude,
               period, duration_months, start_date_label, scholarship, workload, transport_included, status, is_boosted, published_at, expires_at)
              VALUES
-             (:company_id, :title, :area, :description, :responsibilities, :requirements, :modality, :city, :state, :address,
+             (:company_id, :title, :area, :description, :responsibilities, :requirements, :modality, :city, :state, :address, :latitude, :longitude,
               :period, :duration_months, :start_date_label, :scholarship, :workload, :transport_included, "active", 0, NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY))'
         );
         $stmt->execute([
@@ -83,6 +86,8 @@ final class Vacancy extends Model
             'city' => $data['city'] ?? null,
             'state' => $data['state'] ?? null,
             'address' => $data['address'] ?? null,
+            'latitude' => $data['latitude'] ?? null,
+            'longitude' => $data['longitude'] ?? null,
             'period' => $data['period'] ?? null,
             'duration_months' => $data['duration_months'] ?: null,
             'start_date_label' => $data['start_date_label'] ?? 'Imediato',
@@ -118,6 +123,37 @@ final class Vacancy extends Model
         return $stmt->fetchAll();
     }
 
+    public function skillsForVacancies(array $vacancyIds): array
+    {
+        $vacancyIds = array_values(array_unique(array_map('intval', $vacancyIds)));
+        if ($vacancyIds === []) {
+            return [];
+        }
+
+        $placeholders = [];
+        $params = [];
+        foreach ($vacancyIds as $index => $id) {
+            $key = 'id' . $index;
+            $placeholders[] = ':' . $key;
+            $params[$key] = $id;
+        }
+
+        $stmt = $this->db->prepare(
+            'SELECT vacancy_id, skill, is_required
+             FROM vacancy_skills
+             WHERE vacancy_id IN (' . implode(', ', $placeholders) . ')
+             ORDER BY skill'
+        );
+        $stmt->execute($params);
+
+        $grouped = [];
+        foreach ($stmt->fetchAll() as $skill) {
+            $grouped[(int) $skill['vacancy_id']][] = $skill;
+        }
+
+        return $grouped;
+    }
+
     public function countActive(): int
     {
         return (int) $this->db->query('SELECT COUNT(*) FROM vacancies WHERE status = "active"')->fetchColumn();
@@ -137,6 +173,46 @@ final class Vacancy extends Model
         return $stmt->fetch() ?: ['vagas' => 0, 'ativas' => 0];
     }
 
+    public function forCompany(int $companyId): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT *
+             FROM vacancies
+             WHERE company_id = :company_id
+             ORDER BY created_at DESC
+             LIMIT 20'
+        );
+        $stmt->execute(['company_id' => $companyId]);
+
+        return $stmt->fetchAll();
+    }
+
+    public function setBoostedForCompany(int $vacancyId, int $companyId, bool $boosted): bool
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE vacancies
+             SET is_boosted = :boosted
+             WHERE id = :id AND company_id = :company_id'
+        );
+        $stmt->execute(['boosted' => $boosted ? 1 : 0, 'id' => $vacancyId, 'company_id' => $companyId]);
+
+        return $stmt->rowCount() > 0;
+    }
+
+    public function expireOverdue(): int
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE vacancies
+             SET status = "expired"
+             WHERE status = "active"
+               AND expires_at IS NOT NULL
+               AND expires_at < NOW()'
+        );
+        $stmt->execute();
+
+        return $stmt->rowCount();
+    }
+
     private function attachComputedData(array $vacancies, ?int $studentId): array
     {
         $profile = null;
@@ -151,10 +227,14 @@ final class Vacancy extends Model
             );
         }
 
+        $skillsByVacancy = $this->skillsForVacancies(array_column($vacancies, 'id'));
+
+        $recommendation = new ServicoRecomendacao();
+
         foreach ($vacancies as &$vacancy) {
-            $vacancy['skills'] = $this->skills((int) $vacancy['id']);
-            $vacancy['match_score'] = $profile ? $this->matchScore($vacancy, $profile, $studentSkills) : 70;
-            $vacancy['match_reasons'] = $this->matchReasons($vacancy, $profile, $studentSkills);
+            $vacancy['skills'] = $skillsByVacancy[(int) $vacancy['id']] ?? [];
+            $vacancy['match_score'] = $profile ? $recommendation->score($vacancy, $profile, $studentSkills) : 70;
+            $vacancy['match_reasons'] = $recommendation->reasons($vacancy, $profile, $studentSkills);
         }
 
         usort($vacancies, static fn (array $a, array $b): int => ($b['match_score'] <=> $a['match_score']) ?: ($b['is_boosted'] <=> $a['is_boosted']));

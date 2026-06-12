@@ -160,6 +160,18 @@ function status_label(?string $value): string
     };
 }
 
+function vacancy_status_label(?string $value): string
+{
+    return match ($value) {
+        'draft' => 'Rascunho',
+        'active' => 'Ativa',
+        'paused' => 'Pausada',
+        'expired' => 'Expirada',
+        'closed' => 'Encerrada',
+        default => 'Ativa',
+    };
+}
+
 /**
  * Lista oficial das 27 unidades federativas (presentation helper for <select>).
  */

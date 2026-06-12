@@ -149,11 +149,49 @@ final class Security
         return password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
     }
 
+    public static function isValidCnpj(string $cnpj): bool
+    {
+        $cnpj = preg_replace('/\D/', '', $cnpj) ?? '';
+        if (strlen($cnpj) !== 14 || preg_match('/^(\d)\1{13}$/', $cnpj)) {
+            return false;
+        }
+
+        $calculate = static function (string $base, array $weights): int {
+            $sum = 0;
+            foreach ($weights as $index => $weight) {
+                $sum += (int) $base[$index] * $weight;
+            }
+            $mod = $sum % 11;
+
+            return $mod < 2 ? 0 : 11 - $mod;
+        };
+
+        $digit1 = $calculate($cnpj, [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+        $digit2 = $calculate($cnpj, [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+
+        return $digit1 === (int) $cnpj[12] && $digit2 === (int) $cnpj[13];
+    }
+
     private static function fingerprint(): string
     {
         $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? 'cli');
+        $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+        $ipPart = '';
 
-        return hash('sha256', $userAgent . '|EstagioMatch');
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            $parts = explode('.', $ip);
+            $ipPart = implode('.', array_slice($parts, 0, 3));
+        } elseif (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+            $parts = explode(':', $ip);
+            $ipPart = implode(':', array_slice($parts, 0, 4));
+        }
+
+        return hash('sha256', $userAgent . '|' . $ipPart . '|EstagioMatch');
+    }
+
+    public static function sessionFingerprint(): string
+    {
+        return self::fingerprint();
     }
 }
 
