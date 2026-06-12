@@ -10,10 +10,49 @@ use RuntimeException;
 
 final class EmailServico
 {
+    private function env(string $key, mixed $default = ''): mixed
+    {
+        $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
+
+        if ($value !== false && $value !== null && $value !== '') {
+            return $value;
+        }
+
+        $envPath = defined('BASE_PATH') ? BASE_PATH . '/.env' : dirname(__DIR__, 3) . '/.env';
+
+        if (!is_file($envPath) || !is_readable($envPath)) {
+            return $default;
+        }
+
+        foreach (file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+            $line = trim($line);
+
+            if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) {
+                continue;
+            }
+
+            [$envKey, $envValue] = array_map('trim', explode('=', $line, 2));
+
+            if ($envKey !== $key) {
+                continue;
+            }
+
+            $envValue = trim($envValue, "\"'");
+
+            $_ENV[$key] = $envValue;
+            $_SERVER[$key] = $envValue;
+            putenv($key . '=' . $envValue);
+
+            return $envValue;
+        }
+
+        return $default;
+    }
+
     public function configurado(): bool
     {
-        return trim((string) getenv('MAIL_HOST')) !== ''
-            && trim((string) getenv('MAIL_FROM_ADDRESS')) !== '';
+        return trim((string) $this->env('MAIL_HOST')) !== ''
+            && trim((string) $this->env('MAIL_FROM_ADDRESS')) !== '';
     }
 
     public function enviarVerificacaoEmail(string $toEmail, string $toName, string $verificationUrl): void
@@ -64,13 +103,13 @@ final class EmailServico
             throw new RuntimeException('PHPMailer não está disponível. Execute composer install.');
         }
 
-        $host = trim((string) getenv('MAIL_HOST'));
-        $port = (int) (getenv('MAIL_PORT') ?: 587);
-        $username = trim((string) getenv('MAIL_USERNAME'));
-        $password = (string) getenv('MAIL_PASSWORD');
-        $encryption = trim((string) (getenv('MAIL_ENCRYPTION') ?: 'tls'));
-        $fromAddress = trim((string) getenv('MAIL_FROM_ADDRESS'));
-        $fromName = trim((string) (getenv('MAIL_FROM_NAME') ?: 'Estágio Match'));
+        $host = trim((string) $this->env('MAIL_HOST'));
+        $port = (int) $this->env('MAIL_PORT', 587);
+        $username = trim((string) $this->env('MAIL_USERNAME'));
+        $password = (string) $this->env('MAIL_PASSWORD');
+        $encryption = trim((string) $this->env('MAIL_ENCRYPTION', 'tls'));
+        $fromAddress = trim((string) $this->env('MAIL_FROM_ADDRESS'));
+        $fromName = trim((string) $this->env('MAIL_FROM_NAME', 'Estágio Match'));
 
         if ($host === '' || $fromAddress === '') {
             throw new RuntimeException('Configuração SMTP incompleta: MAIL_HOST e MAIL_FROM_ADDRESS são obrigatórios.');
