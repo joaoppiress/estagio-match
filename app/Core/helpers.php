@@ -27,12 +27,46 @@ function app_config(?string $key = null, mixed $default = null): mixed
     return $value;
 }
 
+function app_base_path(): string
+{
+    static $basePath = null;
+
+    if ($basePath !== null) {
+        return $basePath;
+    }
+
+    $base = trim((string) app_config('base_url', ''));
+
+    if ($base === '') {
+        $basePath = '';
+        return $basePath;
+    }
+
+    $path = '';
+
+    if (str_starts_with($base, 'http://') || str_starts_with($base, 'https://')) {
+        $parsed = parse_url($base);
+        $path = is_array($parsed) ? (string) ($parsed['path'] ?? '') : '';
+    } else {
+        $path = $base;
+    }
+
+    $path = '/' . trim($path, '/');
+    $basePath = $path === '/' ? '' : $path;
+
+    return $basePath;
+}
+
 function base_url(string $path = ''): string
 {
-    $base = (string) app_config('base_url', '');
+    $base = app_base_path();
     $path = ltrim($path, '/');
 
-    return $path === '' ? $base : $base . '/' . $path;
+    if ($path === '') {
+        return $base !== '' ? $base : '/';
+    }
+
+    return ($base !== '' ? $base : '') . '/' . $path;
 }
 
 function route_url(string $route, array $params = []): string
@@ -72,9 +106,15 @@ function back_url(): string
 {
     $fallback = route_url('home');
     $referer = (string) ($_SERVER['HTTP_REFERER'] ?? '');
-    $base = (string) app_config('base_url', '');
 
-    if ($referer !== '' && str_contains($referer, $base)) {
+    if ($referer === '') {
+        return $fallback;
+    }
+
+    $refererHost = parse_url($referer, PHP_URL_HOST);
+    $currentHost = $_SERVER['HTTP_HOST'] ?? '';
+
+    if ($refererHost !== null && $currentHost !== '' && strcasecmp((string) $refererHost, (string) $currentHost) === 0) {
         return $referer;
     }
 
